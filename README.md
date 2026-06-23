@@ -1,4 +1,4 @@
-# 🌱 Garden Survivors
+# 🌱 lium's Decay
 
 Um jogo de sobrevivência inspirado em **Brotato**, onde plantas guerreiras enfrentam hordas intermináveis de zumbis para proteger o jardim.
 
