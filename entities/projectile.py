@@ -1,6 +1,3 @@
-"""
-Classe Tiro - projéteis disparados pelo jogador
-"""
 import pygame
 from entities.base import Entidade
 from config import TIRO_VELOCIDADE, COR_TIRO, TIRO_TAMANHO
