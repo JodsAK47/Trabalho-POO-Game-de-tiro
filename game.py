@@ -5,7 +5,10 @@ from entities.projectile import Tiro
 from inimigos1 import ZumbiComum, ZumbiCorredor
 from config import (
     LARGURA, ALTURA, FPS, COR_FUNDO, COR_TEXTO,
-    SPAWN_INTERVALO, TAXA_ZUMBI_COMUM, TIRO_DANO
+    SPAWN_INTERVALO, TAXA_ZUMBI_COMUM, TIRO_DANO,
+    INIMIGOS_RODADA_INICIAL,
+    AUMENTO_INIMIGOS_POR_RODADA,
+    TEMPO_ENTRE_RODADAS
 )
 
 
@@ -17,7 +20,7 @@ class Game:
         pygame.display.set_caption("Garden Survivors")
         self.clock = pygame.time.Clock()
         self.fonte = pygame.font.SysFont(None, 30)
-        
+
         # Sprites groups
         self.todos_sprites = pygame.sprite.Group()
         self.inimigos = pygame.sprite.Group()
@@ -26,20 +29,31 @@ class Game:
         # Criar jogador
         self.jogador = Jogador(LARGURA // 2, ALTURA - 60)
         self.todos_sprites.add(self.jogador)
-        
-        # Variáveis de jogo
+        #variaveis
         self.pontos = 0
         self.spawn_timer = 0
         self.rodando = True
+        self.tempo_ultimo_tiro = 0
+        self.intervalo_tiro = 180
+        #rodadas
+        self.rodada = 1
+        self.inimigos_para_spawnar = INIMIGOS_RODADA_INICIAL
+        self.inimigos_spawnados = 0
+        self.tempo_entre_rodadas = 0
+        self.aguardando_proxima_rodada = False
+
 
     def processar_eventos(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.rodando = False
 
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    self.disparar_tiro()
+        teclas = pygame.key.get_pressed()
+        agora = pygame.time.get_ticks()
+
+        if teclas[pygame.K_SPACE] and agora - self.tempo_ultimo_tiro >= self.intervalo_tiro:
+            self.disparar_tiro()
+            self.tempo_ultimo_tiro = agora
 
     def disparar_tiro(self):
         tiro = Tiro(self.jogador.rect.centerx, self.jogador.rect.y)
@@ -83,7 +97,7 @@ class Game:
                 if zumbi.vida <= 0:
                     self.pontos += 1
 
-        #Colisão zumbi e jogador
+        #colisão zumbi e jogador
         if pygame.sprite.spritecollide(self.jogador, self.inimigos, True):
             if self.jogador.tomar_dano():
                 print("GAME OVER!")
@@ -91,18 +105,46 @@ class Game:
 
     def atualizar(self):
         # Timer de spawn
-        self.spawn_timer += 1
-        if self.spawn_timer > SPAWN_INTERVALO:
-            self.spawnar_inimigo()
-            self.spawn_timer = 0
+        if not self.aguardando_proxima_rodada:
+
+            if self.inimigos_spawnados < self.inimigos_para_spawnar:
+
+                self.spawn_timer += 1
+
+                if self.spawn_timer >= SPAWN_INTERVALO:
+                    self.spawnar_inimigo()
+                    self.inimigos_spawnados += 1
+                    self.spawn_timer = 0
+
+    # quando morrer todo mundo e rodada acabar
+            elif len(self.inimigos) == 0:
+                self.aguardando_proxima_rodada = True
+                self.tempo_entre_rodadas = TEMPO_ENTRE_RODADAS
+
+        else:
+    #contagem para próxima rodada
+            self.tempo_entre_rodadas -= 1
+            if self.tempo_entre_rodadas <= 0:
+                self.iniciar_proxima_rodada()
 
         self.jogador.update()
         self.tiros.update()
+
         for inimigo in self.inimigos:
             inimigo.update(self.jogador)
-
-        
         self.verificar_colisoes()
+
+    def iniciar_proxima_rodada(self):
+        self.rodada += 1
+    # Aumenta quantidade de inimigos
+        self.inimigos_para_spawnar = (
+            INIMIGOS_RODADA_INICIAL +
+            (self.rodada - 1) * AUMENTO_INIMIGOS_POR_RODADA
+    )
+        self.inimigos_spawnados = 0
+        self.spawn_timer = 0
+        self.aguardando_proxima_rodada = False
+        print(f"rodada {self.rodada}")
 
     def desenhar(self):
         self.tela.fill(COR_FUNDO)
@@ -110,7 +152,7 @@ class Game:
 
         #hudzinha la de cima 
         texto = self.fonte.render(
-            f"Vida: {self.jogador.vida}  |  Pontos: {self.pontos}",
+           f"Rodada: {self.rodada} | Vida: {self.jogador.vida} | Pontos: {self.pontos}",
             True, COR_TEXTO
         )
         self.tela.blit(texto, (10, 10))
