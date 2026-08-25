@@ -25,3 +25,10 @@ TIRO_DANO = 1
 #Spawn de inimigos
 SPAWN_INTERVALO = 40  #
 TAXA_ZUMBI_COMUM = 0.7  # 70% do zumbi normal e 30% do zumbi corredor
+
+#rodadas
+
+INIMIGOS_RODADA_INICIAL = 5
+AUMENTO_INIMIGOS_POR_RODADA = 3
+
+TEMPO_ENTRE_RODADAS = 120  # 2 segundos em 60 FPS
