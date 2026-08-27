@@ -1,6 +1,7 @@
 import pygame
 import random
 from entities.player import Jogador
+from inimigos1 import XP
 from entities.projectile import Tiro
 from inimigos1 import ZumbiComum, ZumbiCorredor
 from config import (
@@ -25,12 +26,14 @@ class Game:
         self.todos_sprites = pygame.sprite.Group()
         self.inimigos = pygame.sprite.Group()
         self.tiros = pygame.sprite.Group()
+        self.xps = pygame.sprite.Group()
         
         # Criar jogador
         self.jogador = Jogador(LARGURA // 2, ALTURA - 60)
         self.todos_sprites.add(self.jogador)
         #variaveis
         self.pontos = 0
+        self.xp = 0
         self.spawn_timer = 0
         self.rodando = True
         self.tempo_ultimo_tiro = 0
@@ -96,7 +99,22 @@ class Game:
                 zumbi.tomar_dano(TIRO_DANO)
                 if zumbi.vida <= 0:
                     self.pontos += 1
+                    xp = XP(
+                        zumbi.rect.centerx,
+                        zumbi.rect.centery,
+                        zumbi.xp
+                    )
+                    self.todos_sprites.add(xp)
+                    self.xps.add(xp)
+        xps_coletados = pygame.sprite.spritecollide(
+            self.jogador,
+            self.xps,
+            True
+            )
 
+        for xp in xps_coletados:
+            self.xp += xp.quantidade
+        
         #colisão zumbi e jogador
         if pygame.sprite.spritecollide(self.jogador, self.inimigos, True):
             if self.jogador.tomar_dano():
@@ -152,7 +170,7 @@ class Game:
 
         #hudzinha la de cima 
         texto = self.fonte.render(
-           f"Rodada: {self.rodada} | Vida: {self.jogador.vida} | Pontos: {self.pontos}",
+           f"Rodada: {self.rodada} | Vida: {self.jogador.vida} | Pontos: {self.pontos} | XP: {self.xp}",
             True, COR_TEXTO
         )
         self.tela.blit(texto, (10, 10))
