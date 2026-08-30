@@ -1,4 +1,4 @@
-# 🌱 lium's Decay
+# 🌱 lilium's Decay
 
 Um jogo de sobrevivência inspirado em **Brotato**, onde plantas guerreiras enfrentam hordas intermináveis de zumbis para proteger o jardim.
 
@@ -23,6 +23,7 @@ A proposta combina a progressão rápida e frenética de Brotato com um universo
 * Diferentes plantas jogáveis.
 * Diversos tipos de zumbis.
 * Chefes especiais.
+* inimigos que surgem em maior quantidade e mais rapido a cada rodada que passa(Usando contadores e quantidades de inimigos)
 
 ---
 
