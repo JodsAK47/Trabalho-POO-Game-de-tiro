@@ -9,7 +9,7 @@ from config import (
     SPAWN_INTERVALO, TAXA_ZUMBI_COMUM, TIRO_DANO,
     INIMIGOS_RODADA_INICIAL,
     AUMENTO_INIMIGOS_POR_RODADA,
-    TEMPO_ENTRE_RODADAS
+    TEMPO_ENTRE_RODADAS, TELA_CHEIA,MENSAGEM_DURACAO,COR_MENSAGEM
 )
 
 
@@ -25,7 +25,7 @@ class Game:
         # Sprites groups
         self.todos_sprites = pygame.sprite.Group()
         self.inimigos = pygame.sprite.Group()
-        self.tiros = pygame.sprite.Group()
+        self.tiros = pygame.sprite.Group()      
         self.xps = pygame.sprite.Group()
         
         # Criar jogador
@@ -34,6 +34,11 @@ class Game:
         #variaveis
         self.pontos = 0
         self.xp = 0
+        self.nivel = 1
+        self.tempo_inicio = pygame.time.get_ticks()
+        self.tempo_final = None
+        
+        self.xp_maximo = 10
         self.spawn_timer = 0
         self.rodando = True
         self.tempo_ultimo_tiro = 0
@@ -44,22 +49,66 @@ class Game:
         self.inimigos_spawnados = 0
         self.tempo_entre_rodadas = 0
         self.aguardando_proxima_rodada = False
+        #MENSGAENS
+        flags = pygame.FULLSCREEN if TELA_CHEIA else 0
+        self.tela = pygame.display.set_mode((LARGURA, ALTURA), flags)
+        pygame.display.set_caption("Garden Survivors")
+        self.clock = pygame.time.Clock()
+        self.fonte = pygame.font.SysFont(None, 30)
 
+        self.mensagens = []
+
+    def mostrar_mensagem(self, texto, duracao=None):
+        self.mensagens.append({
+            "texto": texto,
+            "tempo": duracao if duracao else MENSAGEM_DURACAO
+        })
+
+
+
+    def buscar_inimigo_mais_proximo(self):
+        if not self.inimigos:
+            return None
+
+        inimigo_mais_proximo = None
+        menor_distancia = float("inf")
+
+        jogador_pos = pygame.math.Vector2(self.jogador.rect.center)
+
+        for inimigo in self.inimigos:
+            inimigo_pos = pygame.math.Vector2(inimigo.rect.center)
+            distancia = jogador_pos.distance_to(inimigo_pos)
+
+            if distancia < menor_distancia:
+                menor_distancia = distancia
+                inimigo_mais_proximo = inimigo
+
+        return inimigo_mais_proximo
 
     def processar_eventos(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.rodando = False
 
-        teclas = pygame.key.get_pressed()
         agora = pygame.time.get_ticks()
 
-        if teclas[pygame.K_SPACE] and agora - self.tempo_ultimo_tiro >= self.intervalo_tiro:
+        if agora - self.tempo_ultimo_tiro >= self.intervalo_tiro:
             self.disparar_tiro()
             self.tempo_ultimo_tiro = agora
 
     def disparar_tiro(self):
-        tiro = Tiro(self.jogador.rect.centerx, self.jogador.rect.y)
+        alvo = self.buscar_inimigo_mais_proximo()
+        if alvo is None:
+            return  # sem inimigo na tela, não atira
+
+        jogador_pos = pygame.math.Vector2(self.jogador.rect.center)
+        alvo_pos = pygame.math.Vector2(alvo.rect.center)
+
+        direcao = alvo_pos - jogador_pos
+        if direcao.length() > 0:
+            direcao = direcao.normalize()
+
+        tiro = Tiro(self.jogador.rect.centerx, self.jogador.rect.centery, direcao)
         self.todos_sprites.add(tiro)
         self.tiros.add(tiro)
 
@@ -114,15 +163,27 @@ class Game:
 
         for xp in xps_coletados:
             self.xp += xp.quantidade
-        
+
+            if self.xp >= self.xp_maximo:
+                self.xp -= self.xp_maximo
+                self.nivel += 1
+
+                self.mostrar_mensagem(f"LEVEL UP! Nível {self.nivel}")
         #colisão zumbi e jogador
         if pygame.sprite.spritecollide(self.jogador, self.inimigos, True):
             if self.jogador.tomar_dano():
-                print("GAME OVER!")
+                self.mostrar_mensagem("GAME OVER!", duracao=999999)
+                self.tempo_final = pygame.time.get_ticks()
                 self.rodando = False
 
     def atualizar(self):
-        # Timer de spawn
+         # Atualiza o tempo de vida das mensagens na tela
+        for mensagem in self.mensagens[:]:
+            mensagem["tempo"] -= 1
+            if mensagem["tempo"] <= 0:
+                self.mensagens.remove(mensagem)
+
+    # Timer de spawn
         if not self.aguardando_proxima_rodada:
 
             if self.inimigos_spawnados < self.inimigos_para_spawnar:
@@ -150,6 +211,10 @@ class Game:
 
         for inimigo in self.inimigos:
             inimigo.update(self.jogador)
+
+        for xp in self.xps:
+            xp.update(self.jogador)
+
         self.verificar_colisoes()
 
     def iniciar_proxima_rodada(self):
@@ -162,18 +227,63 @@ class Game:
         self.inimigos_spawnados = 0
         self.spawn_timer = 0
         self.aguardando_proxima_rodada = False
-        print(f"rodada {self.rodada}")
+        self.mostrar_mensagem(f"Rodada {self.rodada}")
 
     def desenhar(self):
         self.tela.fill(COR_FUNDO)
         self.todos_sprites.draw(self.tela)
 
-        #hudzinha la de cima 
+    # Relógio
+        if self.tempo_final is None:
+            tempo_atual = pygame.time.get_ticks()
+            tempo = (tempo_atual - self.tempo_inicio) // 1000
+        else:
+            tempo = (self.tempo_final - self.tempo_inicio) // 1000
+
+    # HUD
         texto = self.fonte.render(
-           f"Rodada: {self.rodada} | Vida: {self.jogador.vida} | Pontos: {self.pontos} | XP: {self.xp}",
-            True, COR_TEXTO
+            f"Rodada: {self.rodada} | Vida: {self.jogador.vida} | "
+            f"Pontos: {self.pontos} | Nível: {self.nivel} | "
+            f"Tempo: {tempo}",
+            True,
+            COR_TEXTO
         )
+
         self.tela.blit(texto, (10, 10))
+
+    # Barra de XP
+        largura_barra = 400
+        altura_barra = 22
+
+        x_barra = (LARGURA - largura_barra) // 2
+        y_barra = ALTURA - 25
+
+        # Fundo da barra
+        pygame.draw.rect(
+            self.tela,
+            (50, 50, 50),
+            (x_barra, y_barra, largura_barra, altura_barra)
+        )
+
+        # Progresso
+        progresso = self.xp / self.xp_maximo
+
+        pygame.draw.rect(
+            self.tela,
+            (0, 255, 100),
+            (
+                x_barra,
+                y_barra,
+                largura_barra * progresso,
+                altura_barra
+            )
+        )
+        y_mensagem = 100
+        for mensagem in self.mensagens:
+            texto_renderizado = self.fonte.render(mensagem["texto"], True, COR_MENSAGEM)
+            rect_texto = texto_renderizado.get_rect(center=(LARGURA // 2, y_mensagem))
+            self.tela.blit(texto_renderizado, rect_texto)
+            y_mensagem += 40
 
         pygame.display.flip()
 

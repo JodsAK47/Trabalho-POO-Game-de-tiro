@@ -1,5 +1,5 @@
 import pygame
-
+from config import XP_RAIO_ATRACAO, XP_VELOCIDADE_ATRACAO
 #CLASSE PAI
 class InimigoBase(pygame.sprite.Sprite):
     
@@ -47,8 +47,22 @@ class XP(pygame.sprite.Sprite):
         super().__init__()
 
         self.quantidade = quantidade
+        self.velocidade = XP_VELOCIDADE_ATRACAO
+
 
         self.image = pygame.Surface((15, 15))
         self.image.fill((0, 255, 0))
 
         self.rect = self.image.get_rect(center=(x, y))
+
+    def update(self,jogador):
+        xp_pos = pygame.math.Vector2(self.rect.center)
+        jogador_pos = pygame.math.Vector2(jogador.rect.center)
+
+        distancia = xp_pos.distance_to(jogador_pos)
+
+        # só se move se estiver dentro do raio de atração
+        if distancia <= XP_RAIO_ATRACAO and distancia > 0:
+            direcao = (jogador_pos - xp_pos).normalize()
+            self.rect.x += direcao.x * self.velocidade
+            self.rect.y += direcao.y * self.velocidade
