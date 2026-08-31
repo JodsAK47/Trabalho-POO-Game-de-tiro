@@ -25,7 +25,7 @@ class Game:
         # Sprites groups
         self.todos_sprites = pygame.sprite.Group()
         self.inimigos = pygame.sprite.Group()
-        self.tiros = pygame.sprite.Group()
+        self.tiros = pygame.sprite.Group()      
         self.xps = pygame.sprite.Group()
         
         # Criar jogador
@@ -34,6 +34,11 @@ class Game:
         #variaveis
         self.pontos = 0
         self.xp = 0
+        self.nivel = 1
+        self.tempo_inicio = pygame.time.get_ticks()
+        self.tempo_final = None
+        
+        self.xp_maximo = 10
         self.spawn_timer = 0
         self.rodando = True
         self.tempo_ultimo_tiro = 0
@@ -114,11 +119,17 @@ class Game:
 
         for xp in xps_coletados:
             self.xp += xp.quantidade
-        
+
+            if self.xp >= self.xp_maximo:
+                self.xp -= self.xp_maximo
+                self.nivel += 1
+
+                print(f"LEVEL UP! Agora você está no nível {self.nivel}")
         #colisão zumbi e jogador
         if pygame.sprite.spritecollide(self.jogador, self.inimigos, True):
             if self.jogador.tomar_dano():
                 print("GAME OVER!")
+                self.tempo_final = pygame.time.get_ticks()
                 self.rodando = False
 
     def atualizar(self):
@@ -168,12 +179,51 @@ class Game:
         self.tela.fill(COR_FUNDO)
         self.todos_sprites.draw(self.tela)
 
-        #hudzinha la de cima 
+    # Relógio
+        if self.tempo_final is None:
+            tempo_atual = pygame.time.get_ticks()
+            tempo = (tempo_atual - self.tempo_inicio) // 1000
+        else:
+            tempo = (self.tempo_final - self.tempo_inicio) // 1000
+
+    # HUD
         texto = self.fonte.render(
-           f"Rodada: {self.rodada} | Vida: {self.jogador.vida} | Pontos: {self.pontos} | XP: {self.xp}",
-            True, COR_TEXTO
+            f"Rodada: {self.rodada} | Vida: {self.jogador.vida} | "
+            f"Pontos: {self.pontos} | Nível: {self.nivel} | "
+            f"Tempo: {tempo}s",
+            True,
+            COR_TEXTO
         )
+
         self.tela.blit(texto, (10, 10))
+
+    # Barra de XP
+        largura_barra = 400
+        altura_barra = 12
+
+        x_barra = (LARGURA - largura_barra) // 2
+        y_barra = ALTURA - 25
+
+        # Fundo da barra
+        pygame.draw.rect(
+            self.tela,
+            (50, 50, 50),
+            (x_barra, y_barra, largura_barra, altura_barra)
+        )
+
+        # Progresso
+        progresso = self.xp / self.xp_maximo
+
+        pygame.draw.rect(
+            self.tela,
+            (0, 255, 100),
+            (
+                x_barra,
+                y_barra,
+                largura_barra * progresso,
+                altura_barra
+            )
+        )
 
         pygame.display.flip()
 
