@@ -32,3 +32,6 @@ INIMIGOS_RODADA_INICIAL = 5
 AUMENTO_INIMIGOS_POR_RODADA = 3
 
 TEMPO_ENTRE_RODADAS = 120  # 2 segundos em 60 FPS
+
+XP_RAIO_ATRACAO = 120      # distância em pixels pra começar a ser atraído
+XP_VELOCIDADE_ATRACAO = 8  # velocidade do XP indo até o jogador

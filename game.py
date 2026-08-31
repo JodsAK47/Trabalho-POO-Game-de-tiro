@@ -51,20 +51,49 @@ class Game:
         self.aguardando_proxima_rodada = False
 
 
+    def buscar_inimigo_mais_proximo(self):
+        if not self.inimigos:
+            return None
+
+        inimigo_mais_proximo = None
+        menor_distancia = float("inf")
+
+        jogador_pos = pygame.math.Vector2(self.jogador.rect.center)
+
+        for inimigo in self.inimigos:
+            inimigo_pos = pygame.math.Vector2(inimigo.rect.center)
+            distancia = jogador_pos.distance_to(inimigo_pos)
+
+            if distancia < menor_distancia:
+                menor_distancia = distancia
+                inimigo_mais_proximo = inimigo
+
+        return inimigo_mais_proximo
+
     def processar_eventos(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.rodando = False
 
-        teclas = pygame.key.get_pressed()
         agora = pygame.time.get_ticks()
 
-        if teclas[pygame.K_SPACE] and agora - self.tempo_ultimo_tiro >= self.intervalo_tiro:
+        if agora - self.tempo_ultimo_tiro >= self.intervalo_tiro:
             self.disparar_tiro()
             self.tempo_ultimo_tiro = agora
 
     def disparar_tiro(self):
-        tiro = Tiro(self.jogador.rect.centerx, self.jogador.rect.y)
+        alvo = self.buscar_inimigo_mais_proximo()
+        if alvo is None:
+            return  # sem inimigo na tela, não atira
+
+        jogador_pos = pygame.math.Vector2(self.jogador.rect.center)
+        alvo_pos = pygame.math.Vector2(alvo.rect.center)
+
+        direcao = alvo_pos - jogador_pos
+        if direcao.length() > 0:
+            direcao = direcao.normalize()
+
+        tiro = Tiro(self.jogador.rect.centerx, self.jogador.rect.centery, direcao)
         self.todos_sprites.add(tiro)
         self.tiros.add(tiro)
 
@@ -161,6 +190,10 @@ class Game:
 
         for inimigo in self.inimigos:
             inimigo.update(self.jogador)
+
+        for xp in self.xps:
+            xp.update(self.jogador)
+
         self.verificar_colisoes()
 
     def iniciar_proxima_rodada(self):
