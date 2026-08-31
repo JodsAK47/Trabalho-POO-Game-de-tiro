@@ -21,7 +21,6 @@ class Game:
         pygame.display.set_caption("Garden Survivors")
         self.clock = pygame.time.Clock()
         self.fonte = pygame.font.SysFont(None, 30)
-
         # Sprites groups
         self.todos_sprites = pygame.sprite.Group()
         self.inimigos = pygame.sprite.Group()

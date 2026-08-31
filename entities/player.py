@@ -61,3 +61,15 @@ class Jogador(Entidade):
 
         return self.vida <= 0
 
+
+class Personagem_2(Entidade):
+    def __init__(self, x, y):
+    
+            super().__init__(
+                x,
+                y,
+                JOGADOR_TAMANHO,
+                JOGADOR_VELOCIDADE
+            )
+            self.image.fill(COR_JOGADOR)
+            self.vida = JOGADOR_VIDA_INICIAL
