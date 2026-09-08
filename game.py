@@ -57,6 +57,11 @@ class Game:
 
         self.mensagens = []
 
+        self.fonte_cards = pygame.font.SysFont(None, 28)
+        #estado de upgrade
+        self.menu_upgrade_ativo = False
+        self.rects_opcoes = []
+
     def mostrar_mensagem(self, texto, duracao=None):
         self.mensagens.append({
             "texto": texto,
@@ -88,6 +93,22 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.rodando = False
+            if self.menu_upgrade_ativo and event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1: 
+                    pos_mouse = event.pos
+                    for rect in self.rects_opcoes:
+                        if rect.collidepoint(pos_mouse):
+                            # Escolheu uma opção!
+                            # Desativa o menu e retoma o jogo
+                            self.menu_upgrade_ativo = False
+                            break
+
+        # Se o jogo estiver pausado no upgrade  ignor os tiro
+        if self.menu_upgrade_ativo:
+            return
+
+
+
 
         agora = pygame.time.get_ticks()
 
@@ -168,6 +189,8 @@ class Game:
                 self.nivel += 1
 
                 self.mostrar_mensagem(f"LEVEL UP! Nível {self.nivel}")
+                self.menu_upgrade_ativo = True  
+
         #colisão zumbi e jogador
         if pygame.sprite.spritecollide(self.jogador, self.inimigos, True):
             if self.jogador.tomar_dano():
@@ -176,6 +199,11 @@ class Game:
                 self.rodando = False
 
     def atualizar(self):
+
+        # menu de habilidade ativo pauso o jogo   
+        if self.menu_upgrade_ativo:
+            return
+        
          # Atualiza o tempo de vida das mensagens na tela
         for mensagem in self.mensagens[:]:
             mensagem["tempo"] -= 1
@@ -227,6 +255,52 @@ class Game:
         self.spawn_timer = 0
         self.aguardando_proxima_rodada = False
         self.mostrar_mensagem(f"Rodada {self.rodada}")
+
+    def desenhar_menu_upgrade(self):
+        # Fundo escuro semi-transparente
+        overlay = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        self.tela.blit(overlay, (0, 0))
+
+        # Configurações dos cartões
+        largura_card = 220
+        altura_card = 280
+        espacamento = 40
+        largura_total = (3 * largura_card) + (2 * espacamento)
+
+        x_inicio = (LARGURA - largura_total) // 2
+        y_inicio = (ALTURA - altura_card) // 2
+
+        self.rects_opcoes = []
+
+        # Título
+        titulo = self.fonte.render("ESCOLHA UMA HABILIDADE", True, (255, 255, 255))
+        rect_titulo = titulo.get_rect(center=(LARGURA // 2, y_inicio - 50))
+        self.tela.blit(titulo, rect_titulo)
+
+        pos_mouse = pygame.mouse.get_pos()
+
+        for i in range(3):
+            x = x_inicio + i * (largura_card + espacamento)
+            rect_card = pygame.Rect(x, y_inicio, largura_card, altura_card)
+            self.rects_opcoes.append(rect_card)
+
+            # Efeito hover ao passar o mouse
+            se_hover = rect_card.collidepoint(pos_mouse)
+            cor_fundo = (60, 60, 80) if se_hover else (40, 40, 50)
+            cor_borda = (255, 215, 0) if se_hover else (150, 150, 150)
+
+            # Desenha o cartão e a borda
+            pygame.draw.rect(self.tela, cor_fundo, rect_card, border_radius=12)
+            pygame.draw.rect(self.tela, cor_borda, rect_card, width=3, border_radius=12)
+
+            # Texto "Habilidade 1", "Habilidade 2", "Habilidade 3"
+            texto = self.fonte_cards.render(f"Habilidade {i + 1}", True, (255, 255, 255))
+            rect_texto = texto.get_rect(center=rect_card.center)
+            self.tela.blit(texto, rect_texto)
+
+
+
 
     def desenhar(self):
         self.tela.fill(COR_FUNDO)
@@ -283,11 +357,16 @@ class Game:
             rect_texto = texto_renderizado.get_rect(center=(LARGURA // 2, y_mensagem))
             self.tela.blit(texto_renderizado, rect_texto)
             y_mensagem += 40
+        if self.menu_upgrade_ativo:
+            self.desenhar_menu_upgrade()
 
+        
         pygame.display.flip()
 
     def executar(self):
+
         #loop principal
+
         while self.rodando:
             self.clock.tick(FPS)
             self.processar_eventos()
