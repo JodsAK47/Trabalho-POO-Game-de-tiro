@@ -7,7 +7,7 @@ from config import TIRO_VELOCIDADE, COR_TIRO, TIRO_TAMANHO, LARGURA, ALTURA
 class Tiro(Entidade):
 
     def __init__(self, x, y, direcao):
-        super().__init__(x, y, TIRO_VELOCIDADE, TIRO_TAMANHO)
+        super().__init__(x, y, TIRO_TAMANHO, TIRO_VELOCIDADE)
         self.image.fill(COR_TIRO)
         self.dano = 1
         self.direcao = direcao
