@@ -306,14 +306,14 @@ class Game:
         self.tela.fill(COR_FUNDO)
         self.todos_sprites.draw(self.tela)
 
-    # Relógio
+    #Relógio
         if self.tempo_final is None:
             tempo_atual = pygame.time.get_ticks()
             tempo = (tempo_atual - self.tempo_inicio) // 1000
         else:
             tempo = (self.tempo_final - self.tempo_inicio) // 1000
 
-    # HUD
+    #HUD
         texto = self.fonte.render(
             f"Rodada: {self.rodada} | Vida: {self.jogador.vida} | "
             f"Pontos: {self.pontos} | Nível: {self.nivel} | "
@@ -324,7 +324,7 @@ class Game:
 
         self.tela.blit(texto, (10, 10))
 
-    # Barra de XP
+    #Barra de XP
         largura_barra = 400
         altura_barra = 22
 
@@ -360,7 +360,6 @@ class Game:
         if self.menu_upgrade_ativo:
             self.desenhar_menu_upgrade()
 
-        
         pygame.display.flip()
 
     def executar(self):
