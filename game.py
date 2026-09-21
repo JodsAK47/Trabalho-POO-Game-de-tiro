@@ -96,10 +96,10 @@ class Game:
             if self.menu_upgrade_ativo and event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1: 
                     pos_mouse = event.pos
-                    for rect in self.rects_opcoes:
+                    for idx, rect in enumerate(self.rects_opcoes):
                         if rect.collidepoint(pos_mouse):
-                            # Escolheu uma opção!
-                            # Desativa o menu e retoma o jogo
+                            # Escolheu uma opção: aplicar upgrade correspondente
+                            self.aplicar_upgrade(idx)
                             self.menu_upgrade_ativo = False
                             break
 
@@ -128,7 +128,9 @@ class Game:
         if direcao.length() > 0:
             direcao = direcao.normalize()
 
-        tiro = Tiro(self.jogador.rect.centerx, self.jogador.rect.centery, direcao)
+        # criar tiro com dano baseado nas habilidades do jogador
+        dano_tiro = getattr(self.jogador, 'get_damage', lambda: TIRO_DANO)()
+        tiro = Tiro(self.jogador.rect.centerx, self.jogador.rect.centery, direcao, dano=dano_tiro)
         self.todos_sprites.add(tiro)
         self.tiros.add(tiro)
 
@@ -165,7 +167,9 @@ class Game:
         )
         for zumbi, tiros_nele in colisoes_tiros.items():
             for tiro in tiros_nele:
-                zumbi.tomar_dano(TIRO_DANO)
+                # usa o dano do próprio tiro (pode vir de upgrades)
+                dano = getattr(tiro, 'dano', TIRO_DANO)
+                zumbi.tomar_dano(dano)
                 if zumbi.vida <= 0:
                     self.pontos += 1
                     xp = XP(
@@ -256,6 +260,22 @@ class Game:
         self.aguardando_proxima_rodada = False
         self.mostrar_mensagem(f"Rodada {self.rodada}")
 
+    def aplicar_upgrade(self, indice):
+        # Aplica o upgrade escolhido pelo jogador: 0=dano,1=vida,2=velocidade
+        if not hasattr(self.jogador, 'apply_upgrade'):
+            return
+
+        mapping = {0: 'dano', 1: 'vida', 2: 'velocidade'}
+        chave = mapping.get(indice)
+        if chave is None:
+            return
+
+        aplicado = self.jogador.apply_upgrade(chave)
+        if aplicado:
+            self.mostrar_mensagem(f"Upgrade aplicado: {chave}")
+        else:
+            self.mostrar_mensagem("Upgrade não disponível (nível máximo)")
+
     def desenhar_menu_upgrade(self):
         # Fundo escuro semi-transparente
         overlay = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
@@ -294,10 +314,23 @@ class Game:
             pygame.draw.rect(self.tela, cor_fundo, rect_card, border_radius=12)
             pygame.draw.rect(self.tela, cor_borda, rect_card, width=3, border_radius=12)
 
-            # Texto "Habilidade 1", "Habilidade 2", "Habilidade 3"
-            texto = self.fonte_cards.render(f"Habilidade {i + 1}", True, (255, 255, 255))
-            rect_texto = texto.get_rect(center=rect_card.center)
-            self.tela.blit(texto, rect_texto)
+            # Texto com nome e nível atual
+            nomes = ["Aumento de Dano", "Vida Máxima", "Velocidade"]
+            niveis = [
+                self.jogador.skill_levels.get('dano', 0),
+                self.jogador.skill_levels.get('vida', 0),
+                self.jogador.skill_levels.get('velocidade', 0)
+            ]
+            nome = nomes[i]
+            nivel_atual = niveis[i]
+
+            titulo_text = self.fonte_cards.render(f"{nome}", True, (255, 255, 255))
+            nivel_text = self.fonte.render(f"Nível: {nivel_atual}/{self.jogador.skill_max}", True, (200, 200, 200))
+
+            rect_titulo = titulo_text.get_rect(midtop=(rect_card.centerx, rect_card.top + 20))
+            rect_nivel = nivel_text.get_rect(midtop=(rect_card.centerx, rect_card.top + 60))
+            self.tela.blit(titulo_text, rect_titulo)
+            self.tela.blit(nivel_text, rect_nivel)
 
 
 

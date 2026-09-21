@@ -1,5 +1,6 @@
 import pygame
 from config import XP_RAIO_ATRACAO, XP_VELOCIDADE_ATRACAO
+
 #CLASSE PAI
 class InimigoBase(pygame.sprite.Sprite):
     

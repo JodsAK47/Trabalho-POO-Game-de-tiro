@@ -8,22 +8,30 @@ from config import (
     ALTURA,
     JOGADOR_VELOCIDADE,
     JOGADOR_VIDA_INICIAL,
-    JOGADOR_TAMANHO
+    JOGADOR_TAMANHO,
+    TIRO_DANO,
+    SKILL_MAX_LEVEL,
+    DAMAGE_MULT_PER_LEVEL,
+    HEALTH_PER_LEVEL,
+    SPEED_PER_LEVEL,
 )
 
 
 class Jogador(Entidade):
-    """Jogador com suporte a animação por sprite sheet e efeito de 'pulo' ao mover.
-
-    Estratégia mínima e não redundante: carrega um sprite-strip horizontal em
-    ARTES/pixilart-sprite.png. Se não encontrar o arquivo, usa um fallback
-    colorido como antes.
-    """
 
     def __init__(self, x, y):
         super().__init__(x, y, JOGADOR_TAMANHO, JOGADOR_VELOCIDADE)
 
+        # vida e atributos base
+        self.vida_max = JOGADOR_VIDA_INICIAL
         self.vida = JOGADOR_VIDA_INICIAL
+
+        # dano base usado para calcular dano do tiro
+        self.base_damage = TIRO_DANO
+
+        # níveis de habilidades: 'dano', 'vida', 'velocidade'
+        self.skill_levels = {'dano': 0, 'vida': 0, 'velocidade': 0}
+        self.skill_max = SKILL_MAX_LEVEL
 
         # animação
         self.frames = []
@@ -57,6 +65,9 @@ class Jogador(Entidade):
         self.image = self.frames[0]
         self.rect = self.image.get_rect(center=(x, y))
         self.base_y = self.rect.centery
+
+        # aplicar bônus iniciais (nenhum por padrão)
+        # velocidade já foi setada via Entidade.velocidade
 
     def mover(self, dx, dy):
         # mover horizontalmente altera o rect; mover verticalmente altera a
@@ -117,6 +128,39 @@ class Jogador(Entidade):
     def tomar_dano(self, dano=1):
         self.vida -= dano
         return self.vida <= 0
+
+    def get_damage(self):
+        # Retorna o dano dos tiros baseado nas habilidades de dano
+        nivel = self.skill_levels.get('dano', 0)
+        mult = 1.0 + DAMAGE_MULT_PER_LEVEL * nivel
+        return self.base_damage * mult
+
+    def apply_upgrade(self, chave: str) -> bool:
+        # Tenta aplicar upgrade na chave: 'dano'|'vida'|'velocidade'.
+        # Retorna True se aplicado, False se já no nível máximo.
+        if chave not in self.skill_levels:
+            return False
+
+        nivel_atual = self.skill_levels[chave]
+        if nivel_atual >= self.skill_max:
+            return False
+
+        # aplica efeito
+        self.skill_levels[chave] += 1
+        novo_nivel = self.skill_levels[chave]
+
+        if chave == 'dano':
+            # dano recalculado dinamicamente em get_damage
+            pass
+        elif chave == 'vida':
+            # aumenta vida máxima e cura o jogador em HEALTH_PER_LEVEL
+            self.vida_max += HEALTH_PER_LEVEL
+            self.vida += HEALTH_PER_LEVEL
+        elif chave == 'velocidade':
+            # aumenta velocidade de movimento
+            self.velocidade += SPEED_PER_LEVEL
+
+        return True
 
 
 class Personagem_2(Entidade):

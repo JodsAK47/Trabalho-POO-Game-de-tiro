@@ -6,10 +6,10 @@ from config import TIRO_VELOCIDADE, COR_TIRO, TIRO_TAMANHO, LARGURA, ALTURA
 
 class Tiro(Entidade):
 
-    def __init__(self, x, y, direcao):
+    def __init__(self, x, y, direcao, dano=None):
         super().__init__(x, y, TIRO_TAMANHO, TIRO_VELOCIDADE)
         self.image.fill(COR_TIRO)
-        self.dano = 1
+        self.dano = dano if dano is not None else 1
         self.direcao = direcao
         
     def update(self):

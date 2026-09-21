@@ -42,3 +42,12 @@ TELA_CHEIA = True
 # Mensagens na tela
 MENSAGEM_DURACAO = 180  # 3 segundos a 60 FPS
 COR_MENSAGEM = (255, 255, 0)  # Amarelo
+
+# Sistema de habilidades
+SKILL_MAX_LEVEL = 5
+# dano aumenta em X% por nível (ex: 0.2 = +20% por nível)
+DAMAGE_MULT_PER_LEVEL = 0.2
+# vida máxima aumenta em pontos por nível
+HEALTH_PER_LEVEL = 1
+# velocidade aumenta em unidades por nível
+SPEED_PER_LEVEL = 0.6
