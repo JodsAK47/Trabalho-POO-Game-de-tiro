@@ -1,29 +1,29 @@
-import os
 import math
 import pygame
 from entities.base import Entidade
+from assets import carregar_frames
 
 from config import (
     LARGURA,
     ALTURA,
     JOGADOR_VELOCIDADE,
     JOGADOR_VIDA_INICIAL,
-    JOGADOR_TAMANHO
+    JOGADOR_TAMANHO, TIRO_DANO, XP_RAIO_ATRACAO
 )
 
 
 class Jogador(Entidade):
-    """Jogador com suporte a animação por sprite sheet e efeito de 'pulo' ao mover.
+    """Planta selecionada, animada por uma faixa horizontal de sprites."""
 
-    Estratégia mínima e não redundante: carrega um sprite-strip horizontal em
-    ARTES/pixilart-sprite.png. Se não encontrar o arquivo, usa um fallback
-    colorido como antes.
-    """
-
-    def __init__(self, x, y):
+    def __init__(self, x, y, personagem="cacto"):
         super().__init__(x, y, JOGADOR_TAMANHO, JOGADOR_VELOCIDADE)
 
         self.vida = JOGADOR_VIDA_INICIAL
+        self.vida_maxima = JOGADOR_VIDA_INICIAL
+        self.dano_tiro = TIRO_DANO
+        self.intervalo_tiro = 180
+        self.raio_atracao_xp = XP_RAIO_ATRACAO
+        self.perfuracoes = 0
 
         # animação
         self.frames = []
@@ -37,22 +37,8 @@ class Jogador(Entidade):
         self.bob_amplitude = 6
         self.bob_speed = 0.018  # controla a frequência do "pulo"
 
-        # tentar carregar sprite sheet
-        sprite_path = os.path.join("ARTES", "pixilart-sprite.png")
-        try:
-            sheet = pygame.image.load(sprite_path).convert_alpha()
-            frame_h = sheet.get_height()
-            count = max(1, sheet.get_width() // frame_h)
-            for i in range(count):
-                rect = pygame.Rect(i * frame_h, 0, frame_h, frame_h)
-                frame = sheet.subsurface(rect)
-                frame = pygame.transform.smoothscale(frame, (JOGADOR_TAMANHO, JOGADOR_TAMANHO))
-                self.frames.append(frame)
-        except Exception:
-            # fallback simples: superfície cheia de cor
-            surf = pygame.Surface((JOGADOR_TAMANHO, JOGADOR_TAMANHO), pygame.SRCALPHA)
-            surf.fill((0, 255, 0))
-            self.frames = [surf]
+        self.personagem = personagem
+        self.frames = carregar_frames(personagem, JOGADOR_TAMANHO)
 
         self.image = self.frames[0]
         self.rect = self.image.get_rect(center=(x, y))
