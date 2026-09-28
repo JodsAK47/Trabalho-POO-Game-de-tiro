@@ -65,15 +65,21 @@ A proposta combina a progressão rápida e frenética de Brotato com um universo
 
 ## ⭐ Sistema de Melhorias
 
-Ao final de cada onda, o jogador poderá escolher melhorias aleatórias:
+Ao subir de nível, o jogo pausa e oferece três habilidades diferentes sorteadas
+entre as cinco abaixo. Clique em um cartão ou pressione **1, 2 ou 3** para escolher.
 
-* Aumento de dano
-* Velocidade de movimento
-* Velocidade de ataque
-* Vida máxima
-* Chance crítica
-* Alcance dos projéteis
-* Habilidades especiais
+| Habilidade | Efeito por escolha |
+| --- | --- |
+| Adubo potente | +20% de dano nos próximos tiros |
+| Fotossíntese acelerada | +15% de velocidade de ataque |
+| Casca resistente | +1 de vida máxima e recupera 1 de vida |
+| Raízes coletoras | +30% de alcance de atração do XP |
+| Espinhos perfurantes | Cada tiro pode atingir mais 1 inimigo |
+
+As melhorias se acumulam durante a partida; os percentuais são aplicados sobre
+o valor atual. Cada projétil causa dano apenas uma vez em cada inimigo.
+Se uma coleta render vários níveis, cada nível concede uma escolha, em sequência.
+Uma nova partida reinicia todos os atributos.
 
 ---
 

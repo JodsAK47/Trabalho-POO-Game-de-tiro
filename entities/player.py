@@ -8,7 +8,7 @@ from config import (
     ALTURA,
     JOGADOR_VELOCIDADE,
     JOGADOR_VIDA_INICIAL,
-    JOGADOR_TAMANHO
+    JOGADOR_TAMANHO, TIRO_DANO, XP_RAIO_ATRACAO
 )
 
 
@@ -19,6 +19,11 @@ class Jogador(Entidade):
         super().__init__(x, y, JOGADOR_TAMANHO, JOGADOR_VELOCIDADE)
 
         self.vida = JOGADOR_VIDA_INICIAL
+        self.vida_maxima = JOGADOR_VIDA_INICIAL
+        self.dano_tiro = TIRO_DANO
+        self.intervalo_tiro = 180
+        self.raio_atracao_xp = XP_RAIO_ATRACAO
+        self.perfuracoes = 0
 
         # animação
         self.frames = []

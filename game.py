@@ -2,6 +2,7 @@ import pygame
 import random
 from assets import criar_mapa
 from menu import MenuInicial
+from habilidades import HABILIDADES
 from entities.player import Jogador
 from inimigos1 import XP
 from entities.projectile import Tiro
@@ -52,7 +53,6 @@ class Game:
         self.spawn_timer = 0
         self.rodando = True
         self.tempo_ultimo_tiro = 0
-        self.intervalo_tiro = 180
         #rodadas
         self.rodada = 1
         self.inimigos_para_spawnar = INIMIGOS_RODADA_INICIAL
@@ -63,6 +63,27 @@ class Game:
         #estado de upgrade
         self.menu_upgrade_ativo = False
         self.rects_opcoes = []
+        self.opcoes_habilidades = []
+        self.melhorias_pendentes = 0
+
+    def abrir_escolha_habilidade(self):
+        self.opcoes_habilidades = random.sample(HABILIDADES, 3)
+        self.rects_opcoes = [pygame.Rect(140 + i * 320, 260, 280, 280) for i in range(3)]
+        self.menu_upgrade_ativo = True
+
+    def escolher_habilidade(self, indice):
+        if not self.menu_upgrade_ativo or not 0 <= indice < len(self.opcoes_habilidades):
+            return
+        habilidade = self.opcoes_habilidades[indice]
+        habilidade.aplicar(self.jogador)
+        self.mostrar_mensagem(habilidade.nome + " adquirida!")
+        self.melhorias_pendentes -= 1
+        if self.melhorias_pendentes > 0:
+            self.abrir_escolha_habilidade()
+        else:
+            self.menu_upgrade_ativo = False
+            self.opcoes_habilidades = []
+            self.rects_opcoes = []
 
     def mostrar_mensagem(self, texto, duracao=None):
         self.mensagens.append({
@@ -111,15 +132,15 @@ class Game:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 self.estado = "menu"
                 return
-            if self.menu_upgrade_ativo and event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1: 
-                    pos_mouse = event.pos
-                    for rect in self.rects_opcoes:
-                        if rect.collidepoint(pos_mouse):
-                            # Escolheu uma opção!
-                            # Desativa o menu e retoma o jogo
-                            self.menu_upgrade_ativo = False
-                            break
+            if self.menu_upgrade_ativo:
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    for i, rect in enumerate(self.rects_opcoes):
+                        if rect.collidepoint(event.pos):
+                            self.escolher_habilidade(i)
+                            return
+                elif event.type == pygame.KEYDOWN and event.key in (pygame.K_1, pygame.K_2, pygame.K_3):
+                    self.escolher_habilidade(event.key - pygame.K_1)
+                    return
 
         # Se o jogo estiver pausado no upgrade  ignor os tiro
         if self.estado != "jogo" or self.menu_upgrade_ativo:
@@ -130,7 +151,7 @@ class Game:
 
         agora = pygame.time.get_ticks()
 
-        if agora - self.tempo_ultimo_tiro >= self.intervalo_tiro:
+        if agora - self.tempo_ultimo_tiro >= self.jogador.intervalo_tiro:
             self.disparar_tiro()
             self.tempo_ultimo_tiro = agora
 
@@ -146,7 +167,10 @@ class Game:
         if direcao.length() > 0:
             direcao = direcao.normalize()
 
-        tiro = Tiro(self.jogador.rect.centerx, self.jogador.rect.centery, direcao, self.jogador.personagem)
+        tiro = Tiro(
+            *self.jogador.rect.center, direcao, self.jogador.personagem,
+            dano=self.jogador.dano_tiro, perfuracoes=self.jogador.perfuracoes,
+        )
         self.todos_sprites.add(tiro)
         self.tiros.add(tiro)
 
@@ -177,22 +201,18 @@ class Game:
 
     def verificar_colisoes(self):
        
-        #Colisão tiro e zumbi
-        colisoes_tiros = pygame.sprite.groupcollide(
-            self.inimigos, self.tiros, False, True
-        )
-        for zumbi, tiros_nele in colisoes_tiros.items():
-            for tiro in tiros_nele:
-                zumbi.tomar_dano(tiro.dano)
+        # Processa cada projétil até consumir seus acertos, sem repetir dano ou XP.
+        for tiro in list(self.tiros):
+            for zumbi in pygame.sprite.spritecollide(tiro, self.inimigos, False):
+                if not tiro.atingir(zumbi):
+                    continue
                 if zumbi.vida <= 0:
                     self.pontos += 1
-                    xp = XP(
-                        zumbi.rect.centerx,
-                        zumbi.rect.centery,
-                        zumbi.xp
-                    )
+                    xp = XP(*zumbi.rect.center, zumbi.xp)
                     self.todos_sprites.add(xp)
                     self.xps.add(xp)
+                if tiro.acertos_restantes == 0:
+                    break
         xps_coletados = pygame.sprite.spritecollide(
             self.jogador,
             self.xps,
@@ -201,13 +221,13 @@ class Game:
 
         for xp in xps_coletados:
             self.xp += xp.quantidade
-
-            if self.xp >= self.xp_maximo:
-                self.xp -= self.xp_maximo
-                self.nivel += 1
-
-                self.mostrar_mensagem(f"LEVEL UP! Nível {self.nivel}")
-                self.menu_upgrade_ativo = True  
+        while self.xp >= self.xp_maximo:
+            self.xp -= self.xp_maximo
+            self.nivel += 1
+            self.melhorias_pendentes += 1
+            self.mostrar_mensagem(f"LEVEL UP! Nível {self.nivel}")
+        if self.melhorias_pendentes and not self.menu_upgrade_ativo:
+            self.abrir_escolha_habilidade()
 
         #colisão zumbi e jogador
         if pygame.sprite.spritecollide(self.jogador, self.inimigos, True):
@@ -280,45 +300,34 @@ class Game:
         overlay.fill((0, 0, 0, 180))
         self.tela.blit(overlay, (0, 0))
 
-        # Configurações dos cartões
-        largura_card = 220
-        altura_card = 280
-        espacamento = 40
-        largura_total = (3 * largura_card) + (2 * espacamento)
-
-        x_inicio = (LARGURA - largura_total) // 2
-        y_inicio = (ALTURA - altura_card) // 2
-
-        self.rects_opcoes = []
-
-        # Título
         titulo = self.fonte.render("ESCOLHA UMA HABILIDADE", True, (255, 255, 255))
-        rect_titulo = titulo.get_rect(center=(LARGURA // 2, y_inicio - 50))
-        self.tela.blit(titulo, rect_titulo)
-
+        self.tela.blit(titulo, titulo.get_rect(center=(LARGURA // 2, 205)))
         pos_mouse = pygame.mouse.get_pos()
-
-        for i in range(3):
-            x = x_inicio + i * (largura_card + espacamento)
-            rect_card = pygame.Rect(x, y_inicio, largura_card, altura_card)
-            self.rects_opcoes.append(rect_card)
-
-            # Efeito hover ao passar o mouse
-            se_hover = rect_card.collidepoint(pos_mouse)
-            cor_fundo = (60, 60, 80) if se_hover else (40, 40, 50)
-            cor_borda = (255, 215, 0) if se_hover else (150, 150, 150)
-
-            # Desenha o cartão e a borda
-            pygame.draw.rect(self.tela, cor_fundo, rect_card, border_radius=12)
-            pygame.draw.rect(self.tela, cor_borda, rect_card, width=3, border_radius=12)
-
-            # Texto "Habilidade 1", "Habilidade 2", "Habilidade 3"
-            texto = self.fonte_cards.render(f"Habilidade {i + 1}", True, (255, 255, 255))
-            rect_texto = texto.get_rect(center=rect_card.center)
-            self.tela.blit(texto, rect_texto)
-
-
-
+        for i, (habilidade, rect) in enumerate(zip(self.opcoes_habilidades, self.rects_opcoes)):
+            hover = rect.collidepoint(pos_mouse)
+            pygame.draw.rect(self.tela, (60, 60, 80) if hover else (40, 40, 50), rect, border_radius=12)
+            pygame.draw.rect(self.tela, (255, 215, 0) if hover else (150, 150, 150), rect, 3, border_radius=12)
+            y = rect.y + 35
+            for texto, cor in ((habilidade.nome, (194, 229, 112)), (habilidade.descricao, COR_TEXTO)):
+                linhas = []
+                linha = ""
+                for palavra in texto.split():
+                    candidata = (linha + " " + palavra).strip()
+                    if linha and self.fonte_cards.size(candidata)[0] > rect.width - 32:
+                        linhas.append(linha)
+                        linha = palavra
+                    else:
+                        linha = candidata
+                linhas.append(linha)
+                for linha in linhas:
+                    imagem = self.fonte_cards.render(linha, True, cor)
+                    self.tela.blit(imagem, imagem.get_rect(midtop=(rect.centerx, y)))
+                    y += 30
+                y += 25
+            tecla = self.fonte_cards.render(f"[{i + 1}] Escolher", True, COR_TEXTO)
+            self.tela.blit(tecla, tecla.get_rect(center=(rect.centerx, rect.bottom - 30)))
+        dica = self.fonte_cards.render("Clique em uma opção ou pressione 1, 2 ou 3", True, COR_TEXTO)
+        self.tela.blit(dica, dica.get_rect(center=(LARGURA // 2, 590)))
 
     def desenhar(self):
         if self.estado == "menu":
@@ -338,7 +347,7 @@ class Game:
 
     #HUD
         texto = self.fonte.render(
-            f"Rodada: {self.rodada} | Vida: {self.jogador.vida} | "
+            f"Rodada: {self.rodada} | Vida: {self.jogador.vida}/{self.jogador.vida_maxima} | "
             f"Pontos: {self.pontos} | Nível: {self.nivel} | "
             f"Tempo: {tempo}",
             True,

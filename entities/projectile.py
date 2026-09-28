@@ -5,14 +5,26 @@ from config import TIRO_VELOCIDADE, TIRO_TAMANHO, TIRO_DANO, LARGURA, ALTURA
 
 
 class Tiro(Entidade):
-    def __init__(self, x, y, direcao, personagem="cacto"):
+    def __init__(self, x, y, direcao, personagem="cacto", dano=TIRO_DANO, perfuracoes=0):
         super().__init__(x, y, TIRO_TAMANHO, TIRO_VELOCIDADE)
         self.direcao = pygame.Vector2(direcao)
         angulo = self.direcao.angle_to(pygame.Vector2(1, 0)) if self.direcao.length_squared() else 0
         self.image = pygame.transform.rotate(carregar_tiro(personagem), angulo)
         self.rect = self.image.get_rect(center=(x, y))
         self.posicao = pygame.Vector2(x, y)
-        self.dano = TIRO_DANO
+        self.dano = dano
+        self.acertos_restantes = 1 + perfuracoes
+        self.inimigos_atingidos = set()
+
+    def atingir(self, inimigo):
+        if self.acertos_restantes <= 0 or inimigo in self.inimigos_atingidos:
+            return False
+        self.inimigos_atingidos.add(inimigo)
+        inimigo.tomar_dano(self.dano)
+        self.acertos_restantes -= 1
+        if self.acertos_restantes == 0:
+            self.kill()
+        return True
 
     def update(self):
         self.posicao += self.direcao * self.velocidade
