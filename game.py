@@ -1,12 +1,14 @@
 import pygame
 import random
+from assets import criar_mapa
+from menu import MenuInicial
 from entities.player import Jogador
 from inimigos1 import XP
 from entities.projectile import Tiro
 from inimigos1 import ZumbiComum, ZumbiCorredor
 from config import (
-    LARGURA, ALTURA, FPS, COR_FUNDO, COR_TEXTO,
-    SPAWN_INTERVALO, TAXA_ZUMBI_COMUM, TIRO_DANO,
+    LARGURA, ALTURA, FPS, COR_TEXTO,
+    SPAWN_INTERVALO, TAXA_ZUMBI_COMUM,
     INIMIGOS_RODADA_INICIAL,
     AUMENTO_INIMIGOS_POR_RODADA,
     TEMPO_ENTRE_RODADAS, TELA_CHEIA,MENSAGEM_DURACAO,COR_MENSAGEM
@@ -17,10 +19,19 @@ class Game:
     #classe do loop principal
     def __init__(self):
         pygame.init()
-        self.tela = pygame.display.set_mode((LARGURA, ALTURA))
-        pygame.display.set_caption("Garden Survivors")
+        flags = pygame.SCALED | (pygame.FULLSCREEN if TELA_CHEIA else 0)
+        self.tela = pygame.display.set_mode((LARGURA, ALTURA), flags)
+        pygame.display.set_caption("Lilium's Decay")
         self.clock = pygame.time.Clock()
         self.fonte = pygame.font.SysFont(None, 30)
+        self.fonte_cards = pygame.font.SysFont(None, 28)
+        self.mapa = criar_mapa((LARGURA, ALTURA))
+        self.menu = MenuInicial()
+        self.estado = "menu"
+        self.rodando = True
+
+    def iniciar_partida(self):
+        self.estado = "jogo"
         # Sprites groups
         self.todos_sprites = pygame.sprite.Group()
         self.inimigos = pygame.sprite.Group()
@@ -28,7 +39,7 @@ class Game:
         self.xps = pygame.sprite.Group()
         
         # Criar jogador
-        self.jogador = Jogador(LARGURA // 2, ALTURA - 60)
+        self.jogador = Jogador(LARGURA // 2, ALTURA - 60, self.menu.personagem)
         self.todos_sprites.add(self.jogador)
         #variaveis
         self.pontos = 0
@@ -48,16 +59,7 @@ class Game:
         self.inimigos_spawnados = 0
         self.tempo_entre_rodadas = 0
         self.aguardando_proxima_rodada = False
-        #MENSGAENS
-        flags = pygame.FULLSCREEN if TELA_CHEIA else 0
-        self.tela = pygame.display.set_mode((LARGURA, ALTURA), flags)
-        pygame.display.set_caption("Garden Survivors")
-        self.clock = pygame.time.Clock()
-        self.fonte = pygame.font.SysFont(None, 30)
-
         self.mensagens = []
-
-        self.fonte_cards = pygame.font.SysFont(None, 28)
         #estado de upgrade
         self.menu_upgrade_ativo = False
         self.rects_opcoes = []
@@ -93,6 +95,22 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.rodando = False
+                return
+            if self.estado == "menu":
+                acao = self.menu.processar_evento(event)
+                if acao == "jogar":
+                    self.iniciar_partida()
+                elif acao == "alternar_tela":
+                    cheia = bool(self.tela.get_flags() & pygame.FULLSCREEN)
+                    flags = pygame.SCALED | (0 if cheia else pygame.FULLSCREEN)
+                    self.tela = pygame.display.set_mode((LARGURA, ALTURA), flags)
+                elif acao == "sair":
+                    self.rodando = False
+                    return
+                continue
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                self.estado = "menu"
+                return
             if self.menu_upgrade_ativo and event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1: 
                     pos_mouse = event.pos
@@ -104,7 +122,7 @@ class Game:
                             break
 
         # Se o jogo estiver pausado no upgrade  ignor os tiro
-        if self.menu_upgrade_ativo:
+        if self.estado != "jogo" or self.menu_upgrade_ativo:
             return
 
 
@@ -128,7 +146,7 @@ class Game:
         if direcao.length() > 0:
             direcao = direcao.normalize()
 
-        tiro = Tiro(self.jogador.rect.centerx, self.jogador.rect.centery, direcao)
+        tiro = Tiro(self.jogador.rect.centerx, self.jogador.rect.centery, direcao, self.jogador.personagem)
         self.todos_sprites.add(tiro)
         self.tiros.add(tiro)
 
@@ -165,7 +183,7 @@ class Game:
         )
         for zumbi, tiros_nele in colisoes_tiros.items():
             for tiro in tiros_nele:
-                zumbi.tomar_dano(TIRO_DANO)
+                zumbi.tomar_dano(tiro.dano)
                 if zumbi.vida <= 0:
                     self.pontos += 1
                     xp = XP(
@@ -196,12 +214,12 @@ class Game:
             if self.jogador.tomar_dano():
                 self.mostrar_mensagem("GAME OVER!", duracao=999999)
                 self.tempo_final = pygame.time.get_ticks()
-                self.rodando = False
+                self.estado = "menu"
 
     def atualizar(self):
 
         # menu de habilidade ativo pauso o jogo   
-        if self.menu_upgrade_ativo:
+        if self.estado != "jogo" or self.menu_upgrade_ativo:
             return
         
          # Atualiza o tempo de vida das mensagens na tela
@@ -303,8 +321,13 @@ class Game:
 
 
     def desenhar(self):
-        self.tela.fill(COR_FUNDO)
+        if self.estado == "menu":
+            self.menu.desenhar(self.tela)
+            pygame.display.flip()
+            return
+        self.tela.blit(self.mapa, (0, 0))
         self.todos_sprites.draw(self.tela)
+        pygame.draw.rect(self.tela, (30, 40, 30), (0, 0, LARGURA, 42))
 
     #Relógio
         if self.tempo_final is None:
@@ -369,6 +392,8 @@ class Game:
         while self.rodando:
             self.clock.tick(FPS)
             self.processar_eventos()
+            if not self.rodando:
+                break
             self.atualizar()
             self.desenhar()
 

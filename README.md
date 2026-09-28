@@ -91,9 +91,21 @@ Sobreviver ao maior número possível de ondas e derrotar os chefes que surgem d
 | A     | Mover para esquerda |
 | S     | Mover para baixo    |
 | D     | Mover para direita  |
-| ESC   | Pausar jogo         |
+| ESC   | Voltar ao menu e encerrar a partida atual |
 
 ---
+
+### Menu e sprites implementados
+
+No menu inicial, clique em **Jogar** ou pressione Enter/Espaço para abrir a seleção.
+Depois, selecione **Cacto**, **Ervilheiro** ou **Lírio** com o mouse, A/D ou as setas.
+Clique em **Iniciar partida** ou pressione Enter/Espaço para começar.
+Na seleção, **Voltar** ou ESC retorna ao menu inicial.
+Cada planta usa sua animação e seu projétil; os atributos de combate continuam iguais.
+O cenário da partida usa a textura `ARTES/deserto.png` repetida pelo mapa.
+
+ESC durante a partida retorna ao menu; ao jogar novamente, a partida começa do zero.
+Ao perder toda a vida, o jogo também retorna ao menu inicial. ESC no menu ou **Sair** fecha o jogo.
 
 ## 🛠️ Tecnologias Utilizadas
 
